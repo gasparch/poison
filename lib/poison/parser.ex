@@ -194,8 +194,18 @@ defmodule Poison.Parser do
 
   ## Strings
 
+  defp acc_to_binary([]) do
+    ""
+  end
+  defp acc_to_binary([[], acc]) when is_binary(acc) do
+    acc
+  end
+  defp acc_to_binary(acc) do
+    IO.iodata_to_binary(acc)
+  end
+
   defp string_continue("\"" <> rest, acc) do
-    {IO.iodata_to_binary(acc), rest}
+    {acc_to_binary(acc), rest}
   end
 
   defp string_continue("\\" <> rest, acc) do
