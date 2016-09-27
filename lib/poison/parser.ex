@@ -170,12 +170,16 @@ defmodule Poison.Parser do
     {number_complete([acc, digits], true), rest}
   end
 
-  defp number_complete(iolist, false) do
-    IO.iodata_to_binary(iolist) |> String.to_integer
+  defp number_complete(iolist, mode) when not is_binary(iolist) do
+    number_complete(IO.iodata_to_binary(iolist), mode)
   end
 
-  defp number_complete(iolist, true) do
-    IO.iodata_to_binary(iolist) |> String.to_float
+  defp number_complete(string, false) when is_binary(string) do
+    string |> String.to_integer
+  end
+
+  defp number_complete(string, true) when is_binary(string) do
+    string |> String.to_float
   end
 
   defp number_digits(<<char>> <> rest = string) when char in '0123456789' do
