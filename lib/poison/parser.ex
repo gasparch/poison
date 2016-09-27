@@ -1,5 +1,3 @@
-require IEx 
-
 defmodule Poison.SyntaxError do
   defexception [:message, :token]
 
@@ -36,7 +34,6 @@ defmodule Poison.Parser do
   def parse(iodata, options \\ [])
 
   def parse(iodata, options) when not is_binary(iodata) do
-    IEx.pry
     parse(IO.iodata_to_binary(iodata), options)
   end
 
@@ -65,7 +62,7 @@ defmodule Poison.Parser do
     end
   end
 
-  defp value("\"" <> rest, _keys),    do: string_continue(rest, "")
+  defp value("\"" <> rest, _keys),    do: string_continue(rest, [])
   defp value("{" <> rest, keys),      do: object_pairs(skip_whitespace(rest), keys, [])
   defp value("[" <> rest, keys),      do: array_values(skip_whitespace(rest), keys, [])
   defp value("null" <> rest, _keys),  do: {nil, rest}
@@ -81,7 +78,7 @@ defmodule Poison.Parser do
   ## Objects
 
   defp object_pairs("\"" <> rest, keys, acc) do
-    {name, rest} = string_continue(rest, "")
+    {name, rest} = string_continue(rest, [])
     {value, rest} = case skip_whitespace(rest) do
       ":" <> rest -> value(skip_whitespace(rest), keys)
       other -> syntax_error(other)
@@ -197,16 +194,8 @@ defmodule Poison.Parser do
 
   ## Strings
 
-  defp acc_to_binary(acc) when is_binary(acc) do
-    acc
-  end
-  defp acc_to_binary(acc) when not is_binary(acc) do
-    :erlang.display acc
-    IO.iodata_to_binary acc
-  end
-
   defp string_continue("\"" <> rest, acc) do
-    {acc_to_binary(acc), rest}
+    {IO.iodata_to_binary(acc), rest}
   end
 
   defp string_continue("\\" <> rest, acc) do
@@ -218,12 +207,12 @@ defmodule Poison.Parser do
   defp string_continue(string, acc) do
     n = string_chunk_size(string, 0)
     <<chunk :: binary-size(n), rest :: binary>> = string
-    string_continue(rest, acc <> chunk)
+    string_continue(rest, [acc, chunk])
   end
 
   for {seq, char} <- Enum.zip('"\\ntr/fb', '"\\\n\t\r/\f\b') do
     defp string_escape(<<unquote(seq)>> <> rest, acc) do
-      string_continue(rest, acc <> <<unquote(char)>>)
+      string_continue(rest, [acc, unquote(char)])
     end
   end
 
@@ -238,11 +227,11 @@ defmodule Poison.Parser do
     hi = List.to_integer([a1, b1, c1, d1], 16)
     lo = List.to_integer([a2, b2, c2, d2], 16)
     codepoint = 0x10000 + ((hi &&& 0x03FF) <<< 10) + (lo &&& 0x03FF)
-    string_continue(rest, acc <> <<codepoint :: utf8>>)
+    string_continue(rest, [acc, <<codepoint :: utf8>>])
   end
 
   defp string_escape(<<?u, seq :: binary-size(4)>> <> rest, acc) do
-    string_continue(rest, acc <> <<String.to_integer(seq, 16) :: utf8>>)
+    string_continue(rest, [acc, <<String.to_integer(seq, 16) :: utf8>> ])
   end
 
   defp string_escape(other, _), do: syntax_error(other)
