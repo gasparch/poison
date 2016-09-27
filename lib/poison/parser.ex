@@ -31,8 +31,13 @@ defmodule Poison.Parser do
 
   @spec parse(iodata, Keyword.t) :: {:ok, t} | {:error, :invalid}
     | {:error, {:invalid, String.t}}
-  def parse(iodata, options \\ []) do
-    string = IO.iodata_to_binary(iodata)
+  def parse(iodata, options \\ [])
+
+  def parse(iodata, options) when not is_binary(iodata) do
+    parse(IO.iodata_to_binary(iodata), options)
+  end
+
+  def parse(string, options) when is_binary(string) do
     {value, rest} = value(skip_whitespace(string), options[:keys])
     case skip_whitespace(rest) do
       "" -> {:ok, value}
